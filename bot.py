@@ -1,10 +1,7 @@
-import sys
-
 import discord
 import json
 import aiofiles
-import timesched
-from discord.ext import commands
+from discord.ext import commands, tasks
 from random import randint
 
 intents = discord.Intents.all()
@@ -23,7 +20,6 @@ async def on_message(message):
         return
     await client.process_commands(message)
 
-
 client.on_message = on_message
 
 
@@ -32,8 +28,28 @@ async def update_log():
         await log_w.write(json.dumps(strong, indent=2))
 
 
+@tasks.loop(seconds=5)
+async def scheduled_pushups():
+    print('test')
+    channel = discord.utils.get(client.get_all_channels(), name='the-iron-temple')
+    string = ''
+    for member in strong:
+        user = discord.utils.get(
+            client.users,
+            name=''.join(member[:-5]),
+            discriminator=''.join(member[-4::]))
+
+        pushup_count = randint(10, 30)
+        string += f'{user.mention} has been assigned {pushup_count} pushups\n'
+        strong[member]['pushups'] += pushup_count
+
+    await update_log()
+    await channel.send(string)
+
+
 @client.event
 async def on_ready():
+    scheduled_pushups.start()
     print(client.guilds)
 
 
@@ -85,7 +101,6 @@ async def leaderboard(ctx):
     else:
         sorted_strong = dict(sorted(strong.items(), key=lambda item: not item[1]['pushups']))
         await ctx.send('\n'.join([k + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
-
 
 
 client.run(token)
