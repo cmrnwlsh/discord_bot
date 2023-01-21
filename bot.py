@@ -1,17 +1,21 @@
+import sys
+
 import discord
 import json
 import aiofiles
+import timesched
 from discord.ext import commands
 from random import randint
+
+intents = discord.Intents.all()
+client = commands.Bot(command_prefix='/', description='get swole', intents=intents)
+strong = {}
 
 with open('token.txt') as token_file:
     token = token_file.read()
 
 with open('log.json', 'r') as log_r:
     strong = json.load(log_r)
-
-intents = discord.Intents.all()
-client = commands.Bot(command_prefix='/', description='get swole', intents=intents)
 
 
 async def on_message(message):
@@ -25,7 +29,7 @@ client.on_message = on_message
 
 async def update_log():
     async with aiofiles.open('log.json', 'w') as log_w:
-        await log_w.write(json.dumps(strong))
+        await log_w.write(json.dumps(strong, indent=2))
 
 
 @client.event
@@ -41,7 +45,7 @@ async def pushups(ctx):
         strong[str(ctx.author)]['pushups'] += n
         await update_log()
     else:
-        ctx.send('you are not yet a disciple of the iron temple')
+        await ctx.send('you are not yet a disciple of the iron temple')
 
 
 @client.command()
@@ -75,8 +79,13 @@ async def remove(ctx):
 
 
 @client.command()
-async def exe(ctx, cmd):
-    await eval(cmd)
+async def leaderboard(ctx):
+    if not len(strong):
+        await ctx.send('no disciples to display')
+    else:
+        sorted_strong = dict(sorted(strong.items(), key=lambda item: not item[1]['pushups']))
+        await ctx.send('\n'.join([k + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
+
 
 
 client.run(token)
