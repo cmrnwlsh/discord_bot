@@ -14,8 +14,9 @@ schedule = datetime.now().replace(day=datetime.now().day + 1, hour=9, minute=0)
 iterator_lock = asyncio.Lock()
 initialized = False
 
-test_channel = discord.utils.get(client.get_all_channels(), name='the-iron-temple-test')
-channel = discord.utils.get(client.get_all_channels(), name='the-iron-temple')
+channel = discord.utils.get(client.get_all_channels(), name='the-iron-temple') if \
+          os.getenv('DEVELOPMENT') else \
+          discord.utils.get(client.get_all_channels(), name='the-iron-temple-test')
 
 
 with open('token.txt') as token_file:
@@ -55,7 +56,7 @@ def roll_pushups():
             name=''.join(member[:-5]),
             discriminator=''.join(member[-4::]))
 
-        await test_channel.send(f'{user.mention} has been assigned {n} pushups')
+        await channel.send(f'{user.mention} has been assigned {n} pushups')
         inner_loop.change_interval(minutes=(12*60)/len(members))
         async with iterator_lock:
             i += 1
@@ -75,10 +76,7 @@ async def daily_reset():
             roll_pushups.i = 0
 
     await update_log()
-    if os.getenv('DEVELOPMENT'):
-        await test_channel.send('```Daily Reset```')
-    else:
-        await channel.send('```Daily Reset```')
+    await channel.send('```Daily Reset```')
 
 
 @daily_reset.before_loop
