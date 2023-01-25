@@ -27,7 +27,8 @@ with open('log.json', 'r') as log_r:
 
 
 async def on_message(message):
-    if str(message.channel) not in ('the-iron-temple', 'the-iron-temple-test'):
+    channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
+    if str(message.channel) not in channel_name:
         return
     await client.process_commands(message)
 
