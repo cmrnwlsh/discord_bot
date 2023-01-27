@@ -175,8 +175,7 @@ async def on_ready():
         return
     daily_reset.start()
     client.on_message = on_message
-    print(client.guilds)
-    print(now)
+    print(f'{client.guilds}\n{now}')
     initialized = True
 
 
