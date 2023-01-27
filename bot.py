@@ -16,7 +16,8 @@ initialized = False
 
 now = datetime.now()
 start_hour = 14  # UTC
-schedule = (now + timedelta(days=int(now.hour > start_hour))).replace(hour=start_hour)
+schedule = (now + timedelta(days=int(now.hour > start_hour)))\
+           .replace(hour=start_hour, minute=0)
 
 
 with open('token.txt') as token_file:
