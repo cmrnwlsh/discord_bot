@@ -15,7 +15,7 @@ iterator_lock = asyncio.Lock()
 initialized = False
 
 now = datetime.now()
-schedule = now.replace(day=now.day + 1 if now.hour > 21 else now.day, hour=21, minute=0)
+schedule = now.replace(day=now.day + 1 if now.hour > 9 else now.day, hour=9, minute=0)
 
 
 with open('token.txt') as token_file:
