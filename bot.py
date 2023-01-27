@@ -11,14 +11,14 @@ intents = discord.Intents.all()
 client = commands.Bot(command_prefix='/', description='get swole', intents=intents, help_command=None)
 channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
 strong = {}
-iterator_lock = asyncio.Lock()
+assign_index, iterator_lock = 0, asyncio.Lock()
 initialized = False
 
 now = datetime.now()
 start_hour = 14  # UTC
-schedule = (now + timedelta(days=int(now.hour > start_hour)))\
-           .replace(hour=start_hour, minute=0)
-
+schedule = (now + timedelta(
+    days=int(now.hour > start_hour))).replace(
+    hour=start_hour, minute=0)
 
 with open('token.txt') as token_file:
     token = token_file.read()
@@ -38,46 +38,44 @@ async def update_log():
         await log_w.write(json.dumps(strong, indent=2))
 
 
-def roll_pushups():
-    i = 0
+@tasks.loop(seconds=3)
+async def daily_pushups():
+    global assign_index
+    if len(strong) == 0 or len(strong) == assign_index:
+        return
 
-    @tasks.loop(seconds=3)
-    async def inner_loop():
-        nonlocal i
-        if len(strong) == 0 or len(strong) == i:
-            return
-        members = list(strong.keys())
-        channel = discord.utils.get(client.get_all_channels(), name=channel_name)
-        member = members[i]
-        n = randint(20, 30)
-        strong[member]['pushups'] += n
-        await update_log()
+    members = list(strong.keys())
+    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
+    member = members[assign_index]
+    n = randint(20, 30)
+    strong[member]['pushups'] += n
+    await update_log()
 
-        user = discord.utils.get(
-            client.users,
-            name=''.join(member[:-5]),
-            discriminator=''.join(member[-4::]))
+    user = discord.utils.get(
+        client.users,
+        name=''.join(member[:-5]),
+        discriminator=''.join(member[-4::]))
 
-        await channel.send(f'{user.mention} drop and give me {n} pushups')
-        inner_loop.change_interval(minutes=(12*60)/len(members))
-        print(inner_loop.minutes)
-        async with iterator_lock:
-            i += 1
-
-    return inner_loop
+    await channel.send(f'{user.mention} drop and give me {n} pushups')
+    daily_pushups.change_interval(minutes=(12 * 60) / len(strong))
+    print(daily_pushups.minutes)
+    async with iterator_lock:
+        assign_index += 1
 
 
 @tasks.loop(hours=24)
 async def daily_reset():
+    global assign_index
     if len(strong) == 0:
         return
+
     print('test')
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     for member in strong:
         strong[member]['rolls'] += 1
         strong[member]['pushups'] = 0
         async with iterator_lock:
-            roll_pushups.i = 0
+            assign_index = 0
 
     await update_log()
     await channel.send('Daily Reset')
@@ -86,10 +84,10 @@ async def daily_reset():
 @daily_reset.before_loop
 async def init_loop():
     await asyncio.sleep((schedule - now).total_seconds())
-    roll_pushups().start()
+    daily_pushups.start()
 
 
-@ client.command()
+@client.command()
 async def pushups(ctx, *args):
     """get pushups or use a roll for someone else"""
     if len(args) == 0:
@@ -109,7 +107,6 @@ async def pushups(ctx, *args):
             strong[str(ctx.author)]['rolls'] -= 1
             await ctx.send(f'{target.mention} drop and give me {n} pushups')
             await update_log()
-
         else:
             await ctx.send('user is not a disciple of the iron temple\n'
                            'or you are out of rolls')
@@ -123,6 +120,7 @@ async def signup(ctx):
         strong[str(ctx.author)] = {'rolls': 1,
                                    'pushups': 0}
         await update_log()
+        daily_pushups.change_interval(minutes=(12 * 60) / len(strong))
     else:
         await ctx.send('you are already a member of the iron temple')
 
