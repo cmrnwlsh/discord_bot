@@ -44,9 +44,9 @@ def roll_pushups():
     @tasks.loop(seconds=3)
     async def inner_loop():
         nonlocal i
-        members = list(strong.keys())
         if len(strong) == 0 or len(strong) == i:
             return
+        members = list(strong.keys())
         channel = discord.utils.get(client.get_all_channels(), name=channel_name)
         member = members[i]
         n = randint(20, 30)
