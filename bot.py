@@ -38,6 +38,7 @@ async def update_log():
 
 def roll_pushups():
     i = 0
+    members = list(strong.keys())
 
     @tasks.loop(seconds=3)
     async def inner_loop():
@@ -45,7 +46,6 @@ def roll_pushups():
         if len(strong) == 0 or len(strong) == i:
             return
         channel = discord.utils.get(client.get_all_channels(), name=channel_name)
-        members = list(strong.keys())
         member = members[i]
         n = randint(20, 30)
         strong[member]['pushups'] += n
@@ -145,6 +145,12 @@ async def leaderboard(ctx):
 
 
 @client.command()
+async def rolls(ctx):
+    """display number of rolls the user has left"""
+    await ctx.send(f"you have {strong[str(ctx.author)]['rolls']} rolls remaining (+1 per day)")
+
+
+@client.command()
 async def help(ctx):
     await ctx.send('--**Welcome to the Iron Temple**--\n\n'
                    '**/help**: \n'
@@ -152,11 +158,13 @@ async def help(ctx):
                    '**/signup**: \n'
                    '    Sign up for daily pushups\n\n'
                    '**/remove**: \n'
-                   '    You must not even lift\n\n'
+                   '    Do you even lift?\n\n'
                    '**/pushups** or **/pushups @someone**: \n'
                    '    Roll for pushups or gift them to others\n\n'
                    '**/leaderboard**: \n'
                    "    View today's pushups leaderboard\n\n"
+                   '**/rolls**: \n'
+                   '    Check the number of rolls you have remaining'
                    )
 
 
