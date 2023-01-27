@@ -40,11 +40,11 @@ async def update_log():
 
 def roll_pushups():
     i = 0
-    members = list(strong.keys())
 
     @tasks.loop(seconds=3)
     async def inner_loop():
         nonlocal i
+        members = list(strong.keys())
         if len(strong) == 0 or len(strong) == i:
             return
         channel = discord.utils.get(client.get_all_channels(), name=channel_name)
