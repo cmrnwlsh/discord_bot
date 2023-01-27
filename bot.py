@@ -8,7 +8,7 @@ from discord.ext import commands, tasks
 from random import randint
 
 intents = discord.Intents.all()
-client = commands.Bot(command_prefix='/', description='get swole', intents=intents)
+client = commands.Bot(command_prefix='/', description='get swole', intents=intents, help_command=None)
 channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
 strong = {}
 iterator_lock = asyncio.Lock()
@@ -78,7 +78,7 @@ async def daily_reset():
             roll_pushups.i = 0
 
     await update_log()
-    await channel.send('```Daily Reset```')
+    await channel.send('Daily Reset')
 
 
 @daily_reset.before_loop
@@ -93,7 +93,7 @@ async def pushups(ctx, *args):
     if len(args) == 0:
         if str(ctx.author) in strong:
             n = randint(25, 75)
-            await ctx.send(f'drop and give me {n}')
+            await ctx.send(f'drop and give me {n} pushups')
             strong[str(ctx.author)]['pushups'] += n
             await update_log()
         else:
@@ -105,7 +105,7 @@ async def pushups(ctx, *args):
             n = randint(10, 30)
             strong[str(target)]['pushups'] += n
             strong[str(ctx.author)]['rolls'] -= 1
-            await ctx.send(f'{target.mention} drop and give me {n}')
+            await ctx.send(f'{target.mention} drop and give me {n} pushups')
             await update_log()
 
         else:
@@ -141,7 +141,23 @@ async def leaderboard(ctx):
         await ctx.send('no disciples to display')
     else:
         sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
-        await ctx.send('\n'.join([k + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
+        await ctx.send('\n'.join([f'**{k}**' + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
+
+
+@client.command()
+async def help(ctx):
+    await ctx.send('--**Welcome to the Iron Temple**--\n\n'
+                   '**/help**: \n'
+                   '    Display this list\n\n'
+                   '**/signup**: \n'
+                   '    Sign up for daily pushups\n\n'
+                   '**/remove**: \n'
+                   '    You must not even lift\n\n'
+                   '**/pushups** or **/pushups @someone**: \n'
+                   '    Roll for pushups or gift them to others\n\n'
+                   '**/leaderboard**: \n'
+                   "    View today's pushups leaderboard\n\n"
+                   )
 
 
 @client.event
@@ -152,6 +168,7 @@ async def on_ready():
     daily_reset.start()
     client.on_message = on_message
     print(client.guilds)
+    print(now)
     initialized = True
 
 
