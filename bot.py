@@ -9,14 +9,13 @@ from random import randint
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix='/', description='get swole', intents=intents)
+channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
 strong = {}
-schedule = datetime.now().replace(day=datetime.now().day + 1, hour=9, minute=0)
 iterator_lock = asyncio.Lock()
 initialized = False
 
-channel = discord.utils.get(client.get_all_channels(), name='the-iron-temple') if \
-          os.getenv('DEVELOPMENT') else \
-          discord.utils.get(client.get_all_channels(), name='the-iron-temple-test')
+now = datetime.now()
+schedule = now.replace(day=now.day + 1 if now.hour > 21 else now.day, hour=21, minute=0)
 
 
 with open('token.txt') as token_file:
@@ -27,8 +26,7 @@ with open('log.json', 'r') as log_r:
 
 
 async def on_message(message):
-    channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
-    if str(message.channel) not in channel_name:
+    if str(message.channel.name) != channel_name:
         return
     await client.process_commands(message)
 
@@ -46,6 +44,7 @@ def roll_pushups():
         nonlocal i
         if len(strong) == 0 or len(strong) == i:
             return
+        channel = discord.utils.get(client.get_all_channels(), name=channel_name)
         members = list(strong.keys())
         member = members[i]
         n = randint(20, 30)
@@ -57,8 +56,9 @@ def roll_pushups():
             name=''.join(member[:-5]),
             discriminator=''.join(member[-4::]))
 
-        await channel.send(f'{user.mention} has been assigned {n} pushups')
+        await channel.send(f'{user.mention} drop and give me {n} pushups')
         inner_loop.change_interval(minutes=(12*60)/len(members))
+        print(inner_loop.minutes)
         async with iterator_lock:
             i += 1
 
@@ -70,6 +70,7 @@ async def daily_reset():
     if len(strong) == 0:
         return
     print('test')
+    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     for member in strong:
         strong[member]['rolls'] += 1
         strong[member]['pushups'] = 0
@@ -82,7 +83,7 @@ async def daily_reset():
 
 @daily_reset.before_loop
 async def init_loop():
-    await asyncio.sleep((schedule - datetime.now()).total_seconds())
+    await asyncio.sleep((schedule - now).total_seconds())
     roll_pushups().start()
 
 
@@ -104,7 +105,7 @@ async def pushups(ctx, *args):
             n = randint(10, 30)
             strong[str(target)]['pushups'] += n
             strong[str(ctx.author)]['rolls'] -= 1
-            await ctx.send(f'{target.mention} has been assigned {n}')
+            await ctx.send(f'{target.mention} drop and give me {n}')
             await update_log()
 
         else:
@@ -139,7 +140,7 @@ async def leaderboard(ctx):
     if not len(strong):
         await ctx.send('no disciples to display')
     else:
-        sorted_strong = dict(sorted(strong.items(), key=lambda item: not item[1]['pushups']))
+        sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
         await ctx.send('\n'.join([k + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
 
 
