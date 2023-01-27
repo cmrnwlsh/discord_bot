@@ -3,7 +3,7 @@ import os
 import discord
 import json
 import aiofiles
-from datetime import datetime
+from datetime import datetime, timedelta
 from discord.ext import commands, tasks
 from random import randint
 
@@ -15,7 +15,8 @@ iterator_lock = asyncio.Lock()
 initialized = False
 
 now = datetime.now()
-schedule = now.replace(day=now.day + 1 if now.hour > 14 else now.day, hour=14, minute=0)
+start_hour = 14  # UTC
+schedule = (now + timedelta(days=int(now.hour > start_hour))).replace(hour=start_hour)
 
 
 with open('token.txt') as token_file:
