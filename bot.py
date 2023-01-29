@@ -20,7 +20,7 @@ server_start = datetime.now()
 
 def schedule(x):
     return (x + timedelta(
-        days=int(x.hour > schedule_hour))).replace(
+        days=int(x.hour >= schedule_hour))).replace(
         hour=schedule_hour, minute=0)
 
 
