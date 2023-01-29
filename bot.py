@@ -5,7 +5,7 @@ import json
 import aiofiles
 from datetime import datetime, timedelta
 from discord.ext import commands, tasks
-from random import randint
+from random import randint, shuffle
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix='/', description='get swole', intents=intents, help_command=None)
@@ -14,11 +14,15 @@ strong = {}
 assign_index, iterator_lock = 0, asyncio.Lock()
 initialized = False
 
-now = datetime.now()
-start_hour = 14  # UTC
-schedule = (now + timedelta(
-    days=int(now.hour > start_hour))).replace(
-    hour=start_hour, minute=0)
+schedule_hour = 14  # UTC
+server_start = datetime.now()
+
+
+def schedule(x):
+    return (x + timedelta(
+        days=int(x.hour > schedule_hour))).replace(
+        hour=schedule_hour, minute=0)
+
 
 with open('token.txt') as token_file:
     token = token_file.read()
@@ -57,7 +61,9 @@ async def daily_pushups():
         discriminator=''.join(member[-4::]))
 
     await channel.send(f'{user.mention} drop and give me {n} pushups')
-    daily_pushups.change_interval(minutes=(12 * 60) / len(strong))
+    daily_pushups.change_interval(
+        minutes=(schedule(datetime.now()).total_seconds() / (len(strong) - assign_index + 1)) / 60
+    )
     print(daily_pushups.minutes)
     async with iterator_lock:
         assign_index += 1
@@ -70,7 +76,13 @@ async def daily_reset():
         return
 
     print('test')
+    shuffle(strong)
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
+    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
+    await channel.send('--**Daily Reset**--\n'
+                       '\n'.join([f'**{k}**' + ': ' +
+                                  str(sorted_strong[k]['pushups'])
+                                  for k in sorted_strong]))
     for member in strong:
         strong[member]['rolls'] += 1
         strong[member]['pushups'] = 0
@@ -78,12 +90,11 @@ async def daily_reset():
             assign_index = 0
 
     await update_log()
-    await channel.send('Daily Reset')
 
 
 @daily_reset.before_loop
 async def init_loop():
-    await asyncio.sleep((schedule - now).total_seconds())
+    await asyncio.sleep((schedule(server_start) - server_start).total_seconds())
     daily_pushups.start()
 
 
@@ -120,7 +131,9 @@ async def signup(ctx):
         strong[str(ctx.author)] = {'rolls': 1,
                                    'pushups': 0}
         await update_log()
-        daily_pushups.change_interval(minutes=(12 * 60) / len(strong))
+        daily_pushups.change_interval(
+            minutes=(schedule(datetime.now()).total_seconds() / (len(strong) - assign_index + 1)) / 60
+        )
     else:
         await ctx.send('you are already a member of the iron temple')
 
@@ -168,6 +181,16 @@ async def help(ctx):
                    )
 
 
+@client.command()
+async def test(ctx):
+    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
+    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
+    await channel.send('--**Daily Reset**--\n' +
+                       '\n'.join([f'**{k}**' + ': ' +
+                                  str(sorted_strong[k]['pushups'])
+                                  for k in sorted_strong]))
+
+
 @client.event
 async def on_ready():
     global initialized
@@ -176,7 +199,6 @@ async def on_ready():
     daily_reset.start()
     client.on_message = on_message
     print(client.guilds)
-    print(now)
     initialized = True
 
 
