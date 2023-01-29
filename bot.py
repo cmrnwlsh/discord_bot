@@ -18,10 +18,10 @@ schedule_hour = 14  # UTC
 server_start = datetime.now()
 
 
-def schedule(x):
-    return (x + timedelta(
-        days=int(x.hour >= schedule_hour))).replace(
-        hour=schedule_hour, minute=0)
+def schedule(start, target):
+    return (start + timedelta(
+        days=int(start.hour >= target))).replace(
+        hour=target, minute=0)
 
 
 with open('token.txt') as token_file:
@@ -44,7 +44,9 @@ async def update_log():
 
 def update_interval():
     daily_pushups.change_interval(
-        minutes=((schedule(datetime.now()) - datetime.now()).total_seconds() /
+        minutes=((schedule(datetime.now(),
+                 (schedule_hour + 12) % 24) -
+                  datetime.now()).total_seconds() /
                  (len(strong) - assign_index + 1)) / 60
     )
     print(daily_pushups.minutes)
@@ -102,7 +104,7 @@ async def daily_reset():
 
 @daily_reset.before_loop
 async def init_loop():
-    await asyncio.sleep((schedule(server_start) - server_start).total_seconds())
+    await asyncio.sleep((schedule(server_start, schedule_hour) - server_start).total_seconds())
     daily_pushups.start()
 
 
