@@ -42,7 +42,15 @@ async def update_log():
         await log_w.write(json.dumps(strong, indent=2))
 
 
-@tasks.loop(seconds=3)
+def update_interval():
+    daily_pushups.change_interval(
+        minutes=((schedule(datetime.now()) - datetime.now()).total_seconds() /
+                 (len(strong) - assign_index + 1)) / 60
+    )
+    print(daily_pushups.minutes)
+
+
+@tasks.loop(minutes=1)
 async def daily_pushups():
     global assign_index
     if len(strong) == 0 or len(strong) == assign_index:
@@ -61,9 +69,7 @@ async def daily_pushups():
         discriminator=''.join(member[-4::]))
 
     await channel.send(f'{user.mention} drop and give me {n} pushups')
-    daily_pushups.change_interval(
-        minutes=(schedule(datetime.now()).total_seconds() / (len(strong) - assign_index + 1)) / 60
-    )
+    update_interval()
     print(daily_pushups.minutes)
     async with iterator_lock:
         assign_index += 1
@@ -86,10 +92,12 @@ async def daily_reset():
     for member in strong:
         strong[member]['rolls'] += 1
         strong[member]['pushups'] = 0
-        async with iterator_lock:
-            assign_index = 0
+
+    async with iterator_lock:
+        assign_index = 0
 
     await update_log()
+    daily_pushups.change_interval(seconds=1)
 
 
 @daily_reset.before_loop
@@ -131,9 +139,7 @@ async def signup(ctx):
         strong[str(ctx.author)] = {'rolls': 1,
                                    'pushups': 0}
         await update_log()
-        daily_pushups.change_interval(
-            minutes=(schedule(datetime.now()).total_seconds() / (len(strong) - assign_index + 1)) / 60
-        )
+        update_interval()
     else:
         await ctx.send('you are already a member of the iron temple')
 
@@ -145,6 +151,7 @@ async def remove(ctx):
         await ctx.send(f"{str(ctx.author.mention)} doesn't even lift anymore")
         del strong[str(ctx.author)]
         await update_log()
+        update_interval()
 
 
 @client.command()
