@@ -1,10 +1,12 @@
 {
   "thafarmacyst#4774": {
     "rolls": 2,
-    "pushups": 26
+    "pushups": 125,
+    "drafted": true
   },
   "Scoopahdoopah#9061": {
     "rolls": 1,
-    "pushups": 0
+    "pushups": 59,
+    "drafted": false
   }
 }

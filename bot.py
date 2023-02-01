@@ -14,7 +14,7 @@ strong = {}
 assign_index, iterator_lock = 0, asyncio.Lock()
 initialized = False
 
-schedule_hour = 14  # UTC
+schedule_hour = 21  # UTC
 server_start = datetime.now()
 
 
@@ -42,27 +42,33 @@ async def update_log():
         await log_w.write(json.dumps(strong, indent=2))
 
 
-def update_interval():
-    daily_pushups.change_interval(
-        minutes=((schedule(datetime.now(),
-                 (schedule_hour + 12) % 24) -
-                  datetime.now()).total_seconds() /
-                 (len(strong) - assign_index + 1)) / 60
-    )
+async def update_interval():
+    async with iterator_lock:
+        daily_pushups.change_interval(
+            minutes=((schedule(datetime.now(),
+                               (schedule_hour + 12) % 24) -
+                      datetime.now()).total_seconds() /
+                     (len(strong) - assign_index)) / 60
+        )
     print(daily_pushups.minutes)
 
 
 @tasks.loop(minutes=1)
 async def daily_pushups():
     global assign_index
-    if len(strong) == 0 or len(strong) == assign_index:
+    if not len(strong) or len(strong) == assign_index:
         return
 
-    members = list(strong.keys())
+    members = [x for x in list(strong.keys()) if not strong[x]['drafted']]
+    if not len(members):
+        return
+
+    shuffle(members)
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     member = members[assign_index]
     n = randint(20, 30)
     strong[member]['pushups'] += n
+    strong[member]['drafted'] = True
     await update_log()
 
     user = discord.utils.get(
@@ -71,7 +77,7 @@ async def daily_pushups():
         discriminator=''.join(member[-4::]))
 
     await channel.send(f'{user.mention} drop and give me {n} pushups')
-    update_interval()
+    await update_interval()
     print(daily_pushups.minutes)
     async with iterator_lock:
         assign_index += 1
@@ -139,9 +145,10 @@ async def signup(ctx):
     if str(ctx.author) not in strong:
         await ctx.send(f'{ctx.author.mention} welcome to the iron temple')
         strong[str(ctx.author)] = {'rolls': 1,
-                                   'pushups': 0}
+                                   'pushups': 0,
+                                   'drafted': False}
         await update_log()
-        update_interval()
+        await update_interval()
     else:
         await ctx.send('you are already a member of the iron temple')
 
@@ -153,7 +160,7 @@ async def remove(ctx):
         await ctx.send(f"{str(ctx.author.mention)} doesn't even lift anymore")
         del strong[str(ctx.author)]
         await update_log()
-        update_interval()
+        await update_interval()
 
 
 @client.command()
@@ -192,12 +199,7 @@ async def help(ctx):
 
 @client.command()
 async def test(ctx):
-    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
-    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
-    await channel.send('--**Daily Reset**--\n' +
-                       '\n'.join([f'**{k}**' + ': ' +
-                                  str(sorted_strong[k]['pushups'])
-                                  for k in sorted_strong]))
+    daily_pushups.start()
 
 
 @client.event
