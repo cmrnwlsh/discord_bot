@@ -14,7 +14,7 @@ strong = {}
 assign_index, iterator_lock = 0, asyncio.Lock()
 initialized = False
 
-schedule_hour = 21  # UTC
+schedule_hour = 21 if os.getenv('DEVELOPMENT') else 14  # UTC
 server_start = datetime.now()
 
 
@@ -48,7 +48,7 @@ async def update_interval():
             minutes=((schedule(datetime.now(),
                                (schedule_hour + 12) % 24) -
                       datetime.now()).total_seconds() /
-                     (len(strong) - assign_index)) / 60
+                     (len(strong) - assign_index + 1)) / 60
         )
     print(daily_pushups.minutes)
 
@@ -64,8 +64,7 @@ async def daily_pushups():
         return
 
     shuffle(members)
-    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
-    member = members[assign_index]
+    member = members[0]
     n = randint(20, 30)
     strong[member]['pushups'] += n
     strong[member]['drafted'] = True
@@ -76,9 +75,11 @@ async def daily_pushups():
         name=''.join(member[:-5]),
         discriminator=''.join(member[-4::]))
 
+    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     await channel.send(f'{user.mention} drop and give me {n} pushups')
     await update_interval()
     print(daily_pushups.minutes)
+
     async with iterator_lock:
         assign_index += 1
 
@@ -90,7 +91,6 @@ async def daily_reset():
         return
 
     print('test')
-    shuffle(strong)
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
     await channel.send('--**Daily Reset**--\n'
