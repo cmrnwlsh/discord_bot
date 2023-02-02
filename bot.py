@@ -6,6 +6,7 @@ import aiofiles
 from datetime import datetime, timedelta
 from discord.ext import commands, tasks
 from random import randint, shuffle
+from functools import reduce
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix='/', description='get swole', intents=intents, help_command=None)
@@ -29,6 +30,9 @@ with open('token.txt') as token_file:
 
 with open('log.json', 'r') as log_r:
     strong = json.load(log_r)
+
+if strong:
+    assign_index = reduce(lambda x, y: int(strong[y]['drafted']) + x, strong, 0)
 
 
 async def on_message(message):
@@ -93,13 +97,14 @@ async def daily_reset():
     print('test')
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
-    await channel.send('--**Daily Reset**--\n'
+    await channel.send('--**Daily Reset**--\n' +
                        '\n'.join([f'**{k}**' + ': ' +
                                   str(sorted_strong[k]['pushups'])
                                   for k in sorted_strong]))
     for member in strong:
         strong[member]['rolls'] += 1
         strong[member]['pushups'] = 0
+        strong[member]['drafted'] = False
 
     async with iterator_lock:
         assign_index = 0
@@ -199,7 +204,12 @@ async def help(ctx):
 
 @client.command()
 async def test(ctx):
-    daily_pushups.start()
+    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
+    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
+    await channel.send('--**Daily Reset**--\n' +
+                       '\n'.join([f'**{k}**' + ': ' +
+                                  str(sorted_strong[k]['pushups'])
+                                  for k in sorted_strong]))
 
 
 @client.event
