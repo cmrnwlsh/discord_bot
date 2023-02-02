@@ -12,10 +12,9 @@ intents = discord.Intents.all()
 client = commands.Bot(command_prefix='/', description='get swole', intents=intents, help_command=None)
 channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
 strong = {}
-assign_index, iterator_lock = 0, asyncio.Lock()
 initialized = False
 
-schedule_hour = 21 if os.getenv('DEVELOPMENT') else 14  # UTC
+schedule_hour = 9 if os.getenv('DEVELOPMENT') else 14  # UTC
 server_start = datetime.now()
 
 
@@ -31,9 +30,6 @@ with open('token.txt') as token_file:
 with open('log.json', 'r') as log_r:
     strong = json.load(log_r)
 
-if strong:
-    assign_index = reduce(lambda x, y: int(strong[y]['drafted']) + x, strong, 0)
-
 
 async def on_message(message):
     if str(message.channel.name) != channel_name:
@@ -47,20 +43,21 @@ async def update_log():
 
 
 async def update_interval():
-    async with iterator_lock:
-        daily_pushups.change_interval(
-            minutes=((schedule(datetime.now(),
-                               (schedule_hour + 12) % 24) -
-                      datetime.now()).total_seconds() /
-                     (len(strong) - assign_index + 1)) / 60
-        )
-    print(daily_pushups.minutes)
+    now = datetime.now()
+    if not strong:
+        return
+    undrafted = reduce(lambda x, y: int(not strong[y]['drafted']) + x, strong, 0)
+    if not undrafted:
+        return
+    daily_pushups.change_interval(
+        minutes=(schedule(now, (schedule_hour + 12) % 24) - now).total_seconds() / undrafted / 60)
+    print(daily_pushups.minutes, undrafted)
 
 
 @tasks.loop(minutes=1)
 async def daily_pushups():
     global assign_index
-    if not len(strong) or len(strong) == assign_index:
+    if not len(strong):
         return
 
     members = [x for x in list(strong.keys()) if not strong[x]['drafted']]
@@ -84,8 +81,6 @@ async def daily_pushups():
     await update_interval()
     print(daily_pushups.minutes)
 
-    async with iterator_lock:
-        assign_index += 1
 
 
 @tasks.loop(hours=24)
@@ -105,9 +100,6 @@ async def daily_reset():
         strong[member]['rolls'] += 1
         strong[member]['pushups'] = 0
         strong[member]['drafted'] = False
-
-    async with iterator_lock:
-        assign_index = 0
 
     await update_log()
     daily_pushups.change_interval(seconds=1)
