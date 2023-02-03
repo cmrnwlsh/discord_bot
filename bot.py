@@ -190,11 +190,7 @@ async def help(ctx):
 async def test(ctx):
     """testing purposes only"""
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
-    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
-    await channel.send('--**Daily Reset**--\n' +
-                       '\n'.join([f'**{k}**' + ': ' +
-                                  str(sorted_strong[k]['pushups'])
-                                  for k in sorted_strong]))
+    await channel.send("I knew the perc was fake but I still ate it - because I'm a gremlin")
 
 
 @client.event
