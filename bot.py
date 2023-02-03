@@ -31,12 +31,6 @@ with open('log.json', 'r') as log_r:
     strong = json.load(log_r)
 
 
-async def on_message(message):
-    if str(message.channel.name) != channel_name:
-        return
-    await client.process_commands(message)
-
-
 async def update_log():
     async with aiofiles.open('log.json', 'w') as log_w:
         await log_w.write(json.dumps(strong, indent=2))
@@ -56,7 +50,6 @@ async def update_interval():
 
 @tasks.loop(minutes=1)
 async def daily_pushups():
-    global assign_index
     if not len(strong):
         return
 
@@ -82,7 +75,6 @@ async def daily_pushups():
     print(daily_pushups.minutes)
 
 
-
 @tasks.loop(hours=24)
 async def daily_reset():
     global assign_index
@@ -102,7 +94,7 @@ async def daily_reset():
         strong[member]['drafted'] = False
 
     await update_log()
-    daily_pushups.change_interval(seconds=1)
+    daily_pushups.change_interval(minutes=1)
 
 
 @daily_reset.before_loop
@@ -111,10 +103,10 @@ async def init_loop():
     daily_pushups.start()
 
 
-@client.command()
-async def pushups(ctx, *args):
+@client.hybrid_command(name='pushups')
+async def pushups(ctx, target: commands.UserConverter = None):
     """get pushups or use a roll for someone else"""
-    if len(args) == 0:
+    if not target:
         if str(ctx.author) in strong:
             n = randint(25, 75)
             await ctx.send(f'drop and give me {n} pushups')
@@ -123,7 +115,6 @@ async def pushups(ctx, *args):
         else:
             await ctx.send('you are not yet a disciple of the iron temple')
     else:
-        target = discord.utils.get(client.get_all_members(), id=int(args[0][2:-1]))
         if str(target) in strong and str(ctx.author) in strong \
                 and strong[str(ctx.author)]['rolls'] > 0:
             n = randint(10, 30)
@@ -136,7 +127,7 @@ async def pushups(ctx, *args):
                            'or you are out of rolls')
 
 
-@client.command()
+@client.hybrid_command(name='signup')
 async def signup(ctx):
     """sign up to become a disciple of the iron temple"""
     if str(ctx.author) not in strong:
@@ -150,7 +141,7 @@ async def signup(ctx):
         await ctx.send('you are already a member of the iron temple')
 
 
-@client.command()
+@client.hybrid_command(name='remove')
 async def remove(ctx):
     """turn your back on the iron temple"""
     if str(ctx.author) in strong:
@@ -160,7 +151,7 @@ async def remove(ctx):
         await update_interval()
 
 
-@client.command()
+@client.hybrid_command(name='leaderboard')
 async def leaderboard(ctx):
     """display a daily leaderboard of temple members"""
     if not len(strong):
@@ -170,14 +161,15 @@ async def leaderboard(ctx):
         await ctx.send('\n'.join([f'**{k}**' + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
 
 
-@client.command()
+@client.hybrid_command(name='rolls')
 async def rolls(ctx):
     """display number of rolls the user has left"""
     await ctx.send(f"you have {strong[str(ctx.author)]['rolls']} rolls remaining (+1 per day)")
 
 
-@client.command()
+@client.hybrid_command(name='help')
 async def help(ctx):
+    """get some help"""
     await ctx.send('--**Welcome to the Iron Temple**--\n\n'
                    '**/help**: \n'
                    '    Display this list\n\n'
@@ -194,8 +186,9 @@ async def help(ctx):
                    )
 
 
-@client.command()
+@client.hybrid_command(name='test')
 async def test(ctx):
+    """testing purposes only"""
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
     await channel.send('--**Daily Reset**--\n' +
@@ -210,7 +203,7 @@ async def on_ready():
     if initialized:
         return
     daily_reset.start()
-    client.on_message = on_message
+    await client.tree.sync()
     print(client.guilds)
     initialized = True
 
