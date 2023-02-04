@@ -116,10 +116,9 @@ async def daily_reset():
 
 
 @daily_reset.before_loop
-@daily_pushups.before_loop
 async def init_loop():
     await asyncio.sleep((schedule(server_start, schedule_hour) - server_start).total_seconds())
-
+    daily_pushups.start()
 
 @client.tree.command()
 async def pushups(ctx, target: discord.Member = None):
@@ -227,11 +226,7 @@ async def help(ctx):
 @client.tree.command()
 async def test(ctx, interval: str = 'pushups'):
     """testing purposes only"""
-    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1][interval], reverse=True))
-    await ctx.response.send_message(f'--**{"Weekly" if interval == "weekly" else "Daily"} Reset**--\n' +
-                                    '\n'.join([f'**{k}**' + ': ' +
-                                               str(sorted_strong[k][interval])
-                                               for k in sorted_strong]))
+    daily_pushups.start()
 
 
 @client.event
