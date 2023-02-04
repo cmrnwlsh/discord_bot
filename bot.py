@@ -38,7 +38,8 @@ def schedule(start, target):
 
 def add_pushups(member, n):
     strong[member]['pushups'] += n
-    strong[member]['weekly'] = strong[member]['alltime'] = strong[member]['pushups']
+    strong[member]['weekly'] += n
+    strong[member]['alltime'] += n
 
 
 async def update_log():
@@ -132,8 +133,8 @@ async def pushups(ctx, target: discord.Member = None):
         else:
             await ctx.response.send_message('you are not yet a disciple of the iron temple')
     else:
-        if str(target) in strong and str(ctx.user) in strong \
-                and strong[str(ctx.user)]['rolls'] > 0:
+        if (str(target) in strong and str(ctx.user) in strong
+                and strong[str(ctx.user)]['rolls'] > 0):
             n = randint(10, 30)
             add_pushups(str(target), n)
             strong[str(ctx.user)]['rolls'] -= 1
