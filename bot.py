@@ -103,7 +103,7 @@ async def init_loop():
     daily_pushups.start()
 
 
-@client.hybrid_command(name='pushups')
+@client.tree.command()
 async def pushups(ctx, target: commands.UserConverter = None):
     """get pushups or use a roll for someone else"""
     if not target:
@@ -127,7 +127,7 @@ async def pushups(ctx, target: commands.UserConverter = None):
                            'or you are out of rolls')
 
 
-@client.hybrid_command(name='signup')
+@client.tree.command()
 async def signup(ctx):
     """sign up to become a disciple of the iron temple"""
     if str(ctx.author) not in strong:
@@ -141,7 +141,7 @@ async def signup(ctx):
         await ctx.send('you are already a member of the iron temple')
 
 
-@client.hybrid_command(name='remove')
+@client.tree.command()
 async def remove(ctx):
     """turn your back on the iron temple"""
     if str(ctx.author) in strong:
@@ -151,7 +151,7 @@ async def remove(ctx):
         await update_interval()
 
 
-@client.hybrid_command(name='leaderboard')
+@client.tree.command()
 async def leaderboard(ctx):
     """display a daily leaderboard of temple members"""
     if not len(strong):
@@ -161,13 +161,13 @@ async def leaderboard(ctx):
         await ctx.send('\n'.join([f'**{k}**' + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
 
 
-@client.hybrid_command(name='rolls')
+@client.tree.command()
 async def rolls(ctx):
     """display number of rolls the user has left"""
     await ctx.send(f"you have {strong[str(ctx.author)]['rolls']} rolls remaining (+1 per day)")
 
 
-@client.hybrid_command(name='help')
+@client.tree.command()
 async def help(ctx):
     """get some help"""
     await ctx.send('--**Welcome to the Iron Temple**--\n\n'
@@ -186,11 +186,10 @@ async def help(ctx):
                    )
 
 
-@client.hybrid_command(name='test')
+@client.tree.command()
 async def test(ctx):
     """testing purposes only"""
-    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
-    await channel.send("I knew the perc was fake but I still ate it - because I'm a gremlin")
+    await ctx.send("I knew the perc was fake but I still ate it - because I'm a gremlin")
 
 
 @client.event
@@ -198,8 +197,12 @@ async def on_ready():
     global initialized
     if initialized:
         return
+
+    if os.getenv('DEVELOPMENT'):
+        await client.tree.sync()
+    else:
+        await client.tree.sync()
     daily_reset.start()
-    await client.tree.sync()
     print(client.guilds)
     initialized = True
 
