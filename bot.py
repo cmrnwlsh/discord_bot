@@ -5,6 +5,8 @@ import json
 import aiofiles
 import typing
 from datetime import datetime, timedelta
+
+from discord import app_commands
 from discord.ext import commands, tasks
 from random import randint, shuffle
 from functools import reduce
@@ -85,15 +87,23 @@ async def daily_pushups():
 
 @tasks.loop(hours=24)
 async def daily_reset():
+    global current_day
+
+    current_day += 1
     if len(strong) == 0:
         return
 
+    if current_day == 7:
+        for member in strong:
+            member['weekly'] = member['pushups']
+
     print('test')
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
-    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
-    await channel.send('--**Daily Reset**--\n' +
+    interval = 'weekly' if current_day == 7 else 'pushups'
+    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1][interval], reverse=True))
+    await channel.send(f'--**{interval} Reset**--\n' +
                        '\n'.join([f'**{k}**' + ': ' +
-                                  str(sorted_strong[k]['pushups'])
+                                  str(sorted_strong[k][interval])
                                   for k in sorted_strong]))
     for member in strong:
         strong[member]['rolls'] += 1
@@ -167,11 +177,25 @@ async def leaderboard(ctx, interval: str = 'pushups'):
         await ctx.response.send_message('no disciples to display')
     else:
         try:
+            titles = {'pushups': 'Daily', 'weekly': 'Weekly', 'alltime': 'Alltime'}
             sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1][interval], reverse=True))
-            await ctx.response.send_message('\n'.join([f'**{k}**' + ': ' +
-                                                       str(sorted_strong[k][interval]) for k in sorted_strong]))
+            await ctx.response.send_message(f'--**{titles[interval]} Leaderboard**--\n' +
+                                            '\n'.join([f'**{k}**' + ': ' +
+                                                       str(sorted_strong[k][interval])
+                                                       for k in sorted_strong]))
         except KeyError as error:
             await ctx.response.send_message('options are weekly or alltime', ephemeral=True)
+
+
+@leaderboard.autocomplete('interval')
+async def leaderboard_autocomplete(
+        interaction: discord.Interaction,
+        current: str) -> typing.List[app_commands.Choice[str]]:
+    intervals = ['weekly', 'alltime']
+    return [
+        app_commands.Choice(name=interval, value=interval)
+        for interval in intervals if current in interval
+    ]
 
 
 @client.tree.command()
@@ -200,9 +224,13 @@ async def help(ctx):
 
 
 @client.tree.command()
-async def test(ctx):
+async def test(ctx, interval: str = 'pushups'):
     """testing purposes only"""
-    await ctx.response.send_message("I knew the perc was fake but I still ate it - because I'm a gremlin")
+    sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1][interval], reverse=True))
+    await ctx.response.send_message(f'--**{"Weekly" if interval == "weekly" else "Daily"} Reset**--\n' +
+                                    '\n'.join([f'**{k}**' + ': ' +
+                                               str(sorted_strong[k][interval])
+                                               for k in sorted_strong]))
 
 
 @client.event
