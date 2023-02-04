@@ -116,9 +116,9 @@ async def daily_reset():
 
 
 @daily_reset.before_loop
+@daily_pushups.before_loop
 async def init_loop():
     await asyncio.sleep((schedule(server_start, schedule_hour) - server_start).total_seconds())
-    daily_pushups.start()
 
 
 @client.tree.command()
