@@ -93,23 +93,23 @@ async def daily_reset():
     if len(strong) == 0:
         return
 
-    if current_day == 7:
-        for member in strong:
-            member['weekly'] = member['pushups']
-
     print('test')
     channel = discord.utils.get(client.get_all_channels(), name=channel_name)
     interval = 'weekly' if current_day == 7 else 'pushups'
+    titles = {'pushups': 'Daily', 'weekly': 'Weekly'}
     sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1][interval], reverse=True))
-    await channel.send(f'--**{interval} Reset**--\n' +
+    await channel.send(f'--**{titles[interval]} Reset**--\n' +
                        '\n'.join([f'**{k}**' + ': ' +
                                   str(sorted_strong[k][interval])
                                   for k in sorted_strong]))
     for member in strong:
         strong[member]['rolls'] += 1
-        add_pushups(member, 0)
         strong[member]['pushups'] = 0
         strong[member]['drafted'] = False
+
+    if current_day == 7:
+        for member in strong:
+            member['weekly'] = member['pushups']
 
     await update_log()
 
