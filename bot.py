@@ -3,6 +3,7 @@ import os
 import discord
 import json
 import aiofiles
+import typing
 from datetime import datetime, timedelta
 from discord.ext import commands, tasks
 from random import randint, shuffle
@@ -12,10 +13,19 @@ intents = discord.Intents.all()
 client = commands.Bot(command_prefix='/', description='get swole', intents=intents, help_command=None)
 channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
 strong = {}
+current_day = 0
 initialized = False
 
 schedule_hour = 9 if os.getenv('DEVELOPMENT') else 14  # UTC
 server_start = datetime.now()
+
+with open('token.txt') as token_file:
+    token = token_file.read()
+
+with open('log.json', 'r') as log_r:
+    log = json.load(log_r)
+    strong = log['strong']
+    current_day = log['day']
 
 
 def schedule(start, target):
@@ -24,16 +34,14 @@ def schedule(start, target):
         hour=target, minute=0)
 
 
-with open('token.txt') as token_file:
-    token = token_file.read()
-
-with open('log.json', 'r') as log_r:
-    strong = json.load(log_r)
+def add_pushups(member, n):
+    strong[member]['pushups'] += n
+    strong[member]['weekly'] = strong[member]['alltime'] = strong[member]['pushups']
 
 
 async def update_log():
     async with aiofiles.open('log.json', 'w') as log_w:
-        await log_w.write(json.dumps(strong, indent=2))
+        await log_w.write(json.dumps({'day': current_day, 'strong': strong}, indent=2))
 
 
 async def update_interval():
@@ -50,7 +58,7 @@ async def update_interval():
 
 @tasks.loop(minutes=1)
 async def daily_pushups():
-    if not len(strong):
+    if not len(strong) or daily_pushups.current_loop == 0:
         return
 
     members = [x for x in list(strong.keys()) if not strong[x]['drafted']]
@@ -60,7 +68,7 @@ async def daily_pushups():
     shuffle(members)
     member = members[0]
     n = randint(20, 30)
-    strong[member]['pushups'] += n
+    add_pushups(member, n)
     strong[member]['drafted'] = True
     await update_log()
 
@@ -77,7 +85,6 @@ async def daily_pushups():
 
 @tasks.loop(hours=24)
 async def daily_reset():
-    global assign_index
     if len(strong) == 0:
         return
 
@@ -90,11 +97,11 @@ async def daily_reset():
                                   for k in sorted_strong]))
     for member in strong:
         strong[member]['rolls'] += 1
+        add_pushups(member, 0)
         strong[member]['pushups'] = 0
         strong[member]['drafted'] = False
 
     await update_log()
-    daily_pushups.change_interval(minutes=1)
 
 
 @daily_reset.before_loop
@@ -110,7 +117,7 @@ async def pushups(ctx, target: discord.Member = None):
         if str(ctx.user) in strong:
             n = randint(25, 75)
             await ctx.response.send_message(f'drop and give me {n} pushups')
-            strong[str(ctx.user)]['pushups'] += n
+            add_pushups(str(ctx.user), n)
             await update_log()
         else:
             await ctx.response.send_message('you are not yet a disciple of the iron temple')
@@ -118,7 +125,7 @@ async def pushups(ctx, target: discord.Member = None):
         if str(target) in strong and str(ctx.user) in strong \
                 and strong[str(ctx.user)]['rolls'] > 0:
             n = randint(10, 30)
-            strong[str(target)]['pushups'] += n
+            add_pushups(str(target), n)
             strong[str(ctx.user)]['rolls'] -= 1
             await ctx.response.send_message(f'{target.mention} drop and give me {n} pushups')
             await update_log()
@@ -134,6 +141,8 @@ async def signup(ctx):
         await ctx.response.send_message(f'{ctx.user.mention} welcome to the iron temple')
         strong[str(ctx.user)] = {'rolls': 1,
                                  'pushups': 0,
+                                 'weekly': 0,
+                                 'alltime': 0,
                                  'drafted': False}
         await update_log()
         await update_interval()
@@ -152,14 +161,17 @@ async def remove(ctx):
 
 
 @client.tree.command()
-async def leaderboard(ctx):
-    """display a daily leaderboard of temple members"""
+async def leaderboard(ctx, interval: str = 'pushups'):
+    """display a daily (default), weekly, or alltime leaderboard of temple members"""
     if not len(strong):
         await ctx.response.send_message('no disciples to display')
     else:
-        sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
-        await ctx.response.send_message('\n'.join([f'**{k}**' + ': ' +
-                                                   str(sorted_strong[k]['pushups']) for k in sorted_strong]))
+        try:
+            sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1][interval], reverse=True))
+            await ctx.response.send_message('\n'.join([f'**{k}**' + ': ' +
+                                                       str(sorted_strong[k][interval]) for k in sorted_strong]))
+        except KeyError as error:
+            await ctx.response.send_message('options are weekly or alltime', ephemeral=True)
 
 
 @client.tree.command()
