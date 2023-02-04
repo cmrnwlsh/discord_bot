@@ -104,49 +104,49 @@ async def init_loop():
 
 
 @client.tree.command()
-async def pushups(ctx, target: commands.UserConverter = None):
+async def pushups(ctx, target: discord.Member = None):
     """get pushups or use a roll for someone else"""
     if not target:
-        if str(ctx.author) in strong:
+        if str(ctx.user) in strong:
             n = randint(25, 75)
-            await ctx.send(f'drop and give me {n} pushups')
-            strong[str(ctx.author)]['pushups'] += n
+            await ctx.response.send_message(f'drop and give me {n} pushups')
+            strong[str(ctx.user)]['pushups'] += n
             await update_log()
         else:
-            await ctx.send('you are not yet a disciple of the iron temple')
+            await ctx.response.send_message('you are not yet a disciple of the iron temple')
     else:
-        if str(target) in strong and str(ctx.author) in strong \
-                and strong[str(ctx.author)]['rolls'] > 0:
+        if str(target) in strong and str(ctx.user) in strong \
+                and strong[str(ctx.user)]['rolls'] > 0:
             n = randint(10, 30)
             strong[str(target)]['pushups'] += n
-            strong[str(ctx.author)]['rolls'] -= 1
-            await ctx.send(f'{target.mention} drop and give me {n} pushups')
+            strong[str(ctx.user)]['rolls'] -= 1
+            await ctx.response.send_message(f'{target.mention} drop and give me {n} pushups')
             await update_log()
         else:
-            await ctx.send('user is not a disciple of the iron temple\n'
-                           'or you are out of rolls')
+            await ctx.response.send_message('user is not a disciple of the iron temple\n'
+                                            'or you are out of rolls')
 
 
 @client.tree.command()
 async def signup(ctx):
     """sign up to become a disciple of the iron temple"""
-    if str(ctx.author) not in strong:
-        await ctx.send(f'{ctx.author.mention} welcome to the iron temple')
-        strong[str(ctx.author)] = {'rolls': 1,
-                                   'pushups': 0,
-                                   'drafted': False}
+    if str(ctx.user) not in strong:
+        await ctx.response.send_message(f'{ctx.user.mention} welcome to the iron temple')
+        strong[str(ctx.user)] = {'rolls': 1,
+                                 'pushups': 0,
+                                 'drafted': False}
         await update_log()
         await update_interval()
     else:
-        await ctx.send('you are already a member of the iron temple')
+        await ctx.response.send_message('you are already a member of the iron temple')
 
 
 @client.tree.command()
 async def remove(ctx):
     """turn your back on the iron temple"""
-    if str(ctx.author) in strong:
-        await ctx.send(f"{str(ctx.author.mention)} doesn't even lift anymore")
-        del strong[str(ctx.author)]
+    if str(ctx.user) in strong:
+        await ctx.response.send_message(f"{str(ctx.user.mention)} doesn't even lift anymore")
+        del strong[str(ctx.user)]
         await update_log()
         await update_interval()
 
@@ -155,41 +155,42 @@ async def remove(ctx):
 async def leaderboard(ctx):
     """display a daily leaderboard of temple members"""
     if not len(strong):
-        await ctx.send('no disciples to display')
+        await ctx.response.send_message('no disciples to display')
     else:
         sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1]['pushups'], reverse=True))
-        await ctx.send('\n'.join([f'**{k}**' + ': ' + str(sorted_strong[k]['pushups']) for k in sorted_strong]))
+        await ctx.response.send_message('\n'.join([f'**{k}**' + ': ' +
+                                                   str(sorted_strong[k]['pushups']) for k in sorted_strong]))
 
 
 @client.tree.command()
 async def rolls(ctx):
     """display number of rolls the user has left"""
-    await ctx.send(f"you have {strong[str(ctx.author)]['rolls']} rolls remaining (+1 per day)")
+    await ctx.response.send_message(f"you have {strong[str(ctx.user)]['rolls']} rolls remaining (+1 per day)")
 
 
 @client.tree.command()
 async def help(ctx):
     """get some help"""
-    await ctx.send('--**Welcome to the Iron Temple**--\n\n'
-                   '**/help**: \n'
-                   '    Display this list\n\n'
-                   '**/signup**: \n'
-                   '    Sign up for daily pushups\n\n'
-                   '**/remove**: \n'
-                   '    Do you even lift?\n\n'
-                   '**/pushups** or **/pushups @someone**: \n'
-                   '    Roll for pushups or gift them to others\n\n'
-                   '**/leaderboard**: \n'
-                   "    View today's pushups leaderboard\n\n"
-                   '**/rolls**: \n'
-                   '    Check the number of rolls you have remaining'
-                   )
+    await ctx.response.send_message('--**Welcome to the Iron Temple**--\n\n'
+                                    '**/help**: \n'
+                                    '    Display this list\n\n'
+                                    '**/signup**: \n'
+                                    '    Sign up for daily pushups\n\n'
+                                    '**/remove**: \n'
+                                    '    Do you even lift?\n\n'
+                                    '**/pushups** or **/pushups @someone**: \n'
+                                    '    Roll for pushups or gift them to others\n\n'
+                                    '**/leaderboard**: \n'
+                                    "    View today's pushups leaderboard\n\n"
+                                    '**/rolls**: \n'
+                                    '    Check the number of rolls you have remaining'
+                                    )
 
 
 @client.tree.command()
 async def test(ctx):
     """testing purposes only"""
-    await ctx.send("I knew the perc was fake but I still ate it - because I'm a gremlin")
+    await ctx.response.send_message("I knew the perc was fake but I still ate it - because I'm a gremlin")
 
 
 @client.event
@@ -198,10 +199,7 @@ async def on_ready():
     if initialized:
         return
 
-    if os.getenv('DEVELOPMENT'):
-        await client.tree.sync()
-    else:
-        await client.tree.sync()
+    await client.tree.sync()
     daily_reset.start()
     print(client.guilds)
     initialized = True
