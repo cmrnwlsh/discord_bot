@@ -120,6 +120,7 @@ async def init_loop():
     await asyncio.sleep((schedule(server_start, schedule_hour) - server_start).total_seconds())
     daily_pushups.start()
 
+
 @client.tree.command()
 async def pushups(ctx, target: discord.Member = None):
     """get pushups or use a roll for someone else"""
@@ -221,12 +222,6 @@ async def help(ctx):
                                     '**/rolls**: \n'
                                     '    Check the number of rolls you have remaining'
                                     )
-
-
-@client.tree.command()
-async def test(ctx, interval: str = 'pushups'):
-    """testing purposes only"""
-    daily_pushups.start()
 
 
 @client.event
