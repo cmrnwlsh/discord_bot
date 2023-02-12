@@ -110,7 +110,8 @@ async def daily_reset():
 
     if current_day == 7:
         for member in strong:
-            member['weekly'] = member['pushups']
+            strong[member]['weekly'] = strong[member]['pushups']
+        current_day = 0
 
     await update_log()
 
