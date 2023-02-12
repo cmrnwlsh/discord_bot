@@ -203,11 +203,10 @@ async def leaderboard_autocomplete(
 @client.tree.command()
 async def cum(ctx):
     """play the funny voiceline"""
-    voice_channel = ctx.user.voice.channel
 
-    if voice_channel is not None:
+    if ctx.user.voice:
         await ctx.response.send_message('im over here strokin my shit', ephemeral=True)
-        vc = await voice_channel.connect()
+        vc = await ctx.user.voice.channel.connect()
         vc.play(FFmpegPCMAudio('lotion.mp3'))
         await asyncio.sleep(9)
         await vc.disconnect()
