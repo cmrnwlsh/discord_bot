@@ -6,7 +6,7 @@ import aiofiles
 import typing
 from datetime import datetime, timedelta
 
-from discord import app_commands
+from discord import app_commands, FFmpegPCMAudio
 from discord.ext import commands, tasks
 from random import randint, shuffle
 from functools import reduce
@@ -198,6 +198,22 @@ async def leaderboard_autocomplete(
         app_commands.Choice(name=interval, value=interval)
         for interval in intervals if current in interval
     ]
+
+
+@client.tree.command()
+async def cum(ctx):
+    """play the funny voiceline"""
+    voice_channel = ctx.user.voice.channel
+
+    if voice_channel is not None:
+        await ctx.response.send_message('im over here strokin my shit', ephemeral=True)
+        vc = await voice_channel.connect()
+        vc.play(FFmpegPCMAudio('lotion.mp3'))
+        await asyncio.sleep(9)
+        await vc.disconnect()
+
+    else:
+        await ctx.response.send_message('join a voice channel first', ephemeral=True)
 
 
 @client.tree.command()
