@@ -13,7 +13,7 @@ from functools import reduce
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix='/', description='get swole', intents=intents, help_command=None)
-channel_name = 'the-iron-temple-test' if os.getenv('DEVELOPMENT') else 'the-iron-temple'
+channel_id = 965754238590406656
 strong = {}
 current_day = 0
 initialized = False
@@ -80,7 +80,7 @@ async def daily_pushups():
         name=''.join(member[:-5]),
         discriminator=''.join(member[-4::]))
 
-    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
+    channel = discord.utils.get(client.get_all_channels(), id=channel_id)
     await channel.send(f'{user.mention} drop and give me {n} pushups')
     await update_interval()
     print(daily_pushups.minutes)
@@ -94,8 +94,7 @@ async def daily_reset():
     if len(strong) == 0:
         return
 
-    print('test')
-    channel = discord.utils.get(client.get_all_channels(), name=channel_name)
+    channel = discord.utils.get(client.get_all_channels(), id=channel_id)
     interval = 'weekly' if current_day == 7 else 'pushups'
     titles = {'pushups': 'Daily', 'weekly': 'Weekly'}
     sorted_strong = dict(sorted(strong.items(), key=lambda item: item[1][interval], reverse=True))
@@ -203,7 +202,6 @@ async def leaderboard_autocomplete(
 @client.tree.command()
 async def cum(ctx):
     """play the funny voiceline"""
-
     if ctx.user.voice:
         await ctx.response.send_message('im over here strokin my shit', ephemeral=True)
         vc = await ctx.user.voice.channel.connect()
