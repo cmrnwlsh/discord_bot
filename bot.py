@@ -238,6 +238,13 @@ async def help(ctx):
                                     )
 
 
+@client.command()
+async def channel_send(ctx):
+    if isinstance(ctx.channel, discord.channel.DMChannel):
+        channel = discord.utils.get(client.get_all_channels(), id=channel_id)
+        await channel.send(ctx.message.content)
+
+
 @client.event
 async def on_ready():
     global initialized
