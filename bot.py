@@ -242,7 +242,7 @@ async def help(ctx):
 async def channel_send(ctx, *message):
     if isinstance(ctx.channel, discord.channel.DMChannel) and ctx.message.author.id == 110471031843471360:
         channel = discord.utils.get(client.get_all_channels(), id=channel_id)
-        await channel.send(''.join(message))
+        await channel.send(' '.join(message))
 
 
 @client.event
