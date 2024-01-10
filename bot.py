@@ -198,21 +198,6 @@ async def leaderboard_autocomplete(
         for interval in intervals if current in interval
     ]
 
-
-@client.tree.command()
-async def cum(ctx):
-    """play the funny voiceline"""
-    if ctx.user.voice:
-        await ctx.response.send_message('im over here strokin my shit', ephemeral=True)
-        vc = await ctx.user.voice.channel.connect()
-        vc.play(FFmpegPCMAudio('lotion.mp3'))
-        await asyncio.sleep(9)
-        await vc.disconnect()
-
-    else:
-        await ctx.response.send_message('join a voice channel first', ephemeral=True)
-
-
 @client.tree.command()
 async def rolls(ctx):
     """display number of rolls the user has left"""
